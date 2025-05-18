@@ -1,10 +1,10 @@
 # William Ng
 # Simple calculator project
 
-import tkinter as tk
-from tkinter import messagebox
+import tkinter as tk # GUI library
+from tkinter import messagebox # for error messages
 
-# --- Task 1: Calculator operations ---
+#  Arithmetic operation functions 
 def add(a, b):
     return a + b
 
@@ -19,73 +19,175 @@ def divide(a, b):
         raise ValueError("Cannot divide by zero.")
     return a / b
 
-def calculate():
+#  Calculator state 
+current_op = None
+first_number = None
+reset_next = False
+
+#  Callback functions 
+def on_digit(d):
+    global reset_next # Reset the entry if needed
+    if reset_next:
+        entry.delete(0, tk.END)
+        reset_next = False
+    entry.insert(tk.END, str(d))
+
+
+def on_decimal():
+    global reset_next # Reset the entry if needed
+    text = entry.get()
+    if reset_next:
+        entry.delete(0, tk.END)
+    if "." not in text:
+        entry.insert(tk.END, '.')
+    reset_next = False
+
+
+def on_toggle_sign():
+    """Toggle the sign of the current entry number."""
+    text = entry.get()
+    if not text:
+        return
+    # Only toggle simple numeric values
     try:
-        num1 = float(entry_num1.get())
-        num2 = float(entry_num2.get())
-        op = operation_var.get()
-        if op == "Add":
-            res = add(num1, num2)
-        elif op == "Subtract":
-            res = subtract(num1, num2)
-        elif op == "Multiply":
-            res = multiply(num1, num2)
-        elif op == "Divide":
-            res = divide(num1, num2)
+        value = float(text)
+        toggled = -value
+        entry.delete(0, tk.END)
+        # Remove .0 for integers
+        if toggled.is_integer():
+            entry.insert(tk.END, str(int(toggled)))
         else:
-            raise ValueError("Unknown operation.")
-        label_result.config(text=f"Result: {res}")
-    except ValueError as e:
+            entry.insert(tk.END, str(toggled))
+    except ValueError:
+        # Not a pure number; ignore
+        pass
+
+
+def on_operation(op):
+    global current_op, first_number, reset_next
+    try:
+        first_number = float(entry.get())
+        current_op = op
+        reset_next = True
+    except ValueError:
+        messagebox.showerror("Error", "Invalid input.")
+        entry.delete(0, tk.END)
+
+
+def on_equals():
+    global current_op, first_number, reset_next
+    try:
+        second_number = float(entry.get())
+        if current_op == '+':
+            result = add(first_number, second_number)
+        elif current_op == '-':
+            result = subtract(first_number, second_number)
+        elif current_op == '*':
+            result = multiply(first_number, second_number)
+        elif current_op == '/':
+            result = divide(first_number, second_number)
+        else:
+            messagebox.showerror("Error", "No operation selected.")
+            return
+        entry.delete(0, tk.END)
+        entry.insert(tk.END, str(result))
+        current_op = None
+        reset_next = True
+    except Exception as e:
         messagebox.showerror("Error", str(e))
 
-# --- Task 2: Positive/Negative/Zero checker ---
-def check_number():
-    try:
-        n = float(entry_check.get())
-        if n > 0:
-            verdict = "positive"
-        elif n < 0:
-            verdict = "negative"
-        else:
-            verdict = "zero"
-        label_check_result.config(text=f"The number is {verdict}.")
-    except ValueError:
-        messagebox.showerror("Error", "Please enter a valid number.")
 
-# --- Build the GUI ---
+def on_clear():
+    global current_op, first_number, reset_next
+    entry.delete(0, tk.END)
+    current_op = None
+    first_number = None
+    reset_next = False
+
+
+def on_check_sign():
+    try:
+        value = float(entry.get())
+        if value > 0:
+            msg = "The number is positive."
+        elif value < 0:
+            msg = "The number is negative."
+        else:
+            msg = "The number is zero."
+        messagebox.showinfo("Number Check", msg)
+    except ValueError:
+        messagebox.showerror("Error", "Please enter a valid number to check.")
+
+#  Build the GUI 
 root = tk.Tk()
 root.title("Simple Calculator")
 
-# Calculator frame
-frame_calc = tk.LabelFrame(root, text="Calculator Operations", padx=10, pady=10)
-frame_calc.pack(padx=10, pady=5, fill="x")
+entry = tk.Entry(
+    root,
+    width=16,
+    font=('Arial', 24),
+    bd=4,
+    relief=tk.RIDGE,
+    justify='right'
+)
+entry.grid(row=0, column=0, columnspan=4, padx=5, pady=5)
 
-tk.Label(frame_calc, text="First Number:").grid(row=0, column=0, sticky="e")
-entry_num1 = tk.Entry(frame_calc)
-entry_num1.grid(row=0, column=1)
+# Button layout
+buttons = [
+    ('7', on_digit), ('8', on_digit), ('9', on_digit), ('/', on_operation),
+    ('4', on_digit), ('5', on_digit), ('6', on_digit), ('*', on_operation),
+    ('1', on_digit), ('2', on_digit), ('3', on_digit), ('-', on_operation),
+    ('0', on_digit), ('.', on_decimal), ('=', on_equals), ('+', on_operation)
+]
 
-tk.Label(frame_calc, text="Second Number:").grid(row=1, column=0, sticky="e")
-entry_num2 = tk.Entry(frame_calc)
-entry_num2.grid(row=1, column=1)
+row = 1
+col = 0
+for (text, func) in buttons:
+    if func in (on_digit, on_operation):
+        action = lambda x=text, f=func: f(x)
+    else:
+        action = func
+    tk.Button(
+        root,
+        text=text,
+        width=4,
+        height=2,
+        font=('Arial', 18),
+        command=action
+    ).grid(row=row, column=col, padx=2, pady=2)
+    col += 1
+    if col > 3:
+        col = 0
+        row += 1
 
-tk.Label(frame_calc, text="Operation:").grid(row=2, column=0, sticky="e")
-operation_var = tk.StringVar(value="Add")
-tk.OptionMenu(frame_calc, operation_var, "Add", "Subtract", "Multiply", "Divide").grid(row=2, column=1)
+# Clear button
+tk.Button(
+    root,
+    text='C',
+    width=4,
+    height=2,
+    font=('Arial', 18),
+    command=on_clear
+).grid(row=5, column=0, padx=2, pady=2)
 
-tk.Button(frame_calc, text="Calculate", command=calculate).grid(row=3, column=0, columnspan=2, pady=5)
-label_result = tk.Label(frame_calc, text="Result: ")
-label_result.grid(row=4, column=0, columnspan=2)
+# Toggle sign button
+tk.Button(
+    root,
+    text='+/-',
+    width=4,
+    height=2,
+    font=('Arial', 18),
+    command=on_toggle_sign
+).grid(row=5, column=1, padx=2, pady=2)
 
-# Number checker frame
-frame_check = tk.LabelFrame(root, text="Positive/Negative/Zero Checker", padx=10, pady=10)
-frame_check.pack(padx=10, pady=5, fill="x")
-
-tk.Label(frame_check, text="Enter a number:").grid(row=0, column=0, sticky="e")
-entry_check = tk.Entry(frame_check)
-entry_check.grid(row=0, column=1)
-
-tk.Button(frame_check, text="Check", command=check_number).grid(row=1, column=0, columnspan=2, pady=5)
-label_check_result = tk.Label(frame_check, text="")
-label_check_result.grid(row=2, column=0, columnspan=2)
+# Number checker button
+tk.Button(
+    root,
+    text='Check Sign',
+    width=10,
+    height=2,
+    font=('Arial', 18),
+    command=on_check_sign
+).grid(row=5, column=2, columnspan=2, padx=2, pady=2)
 
 root.mainloop()
