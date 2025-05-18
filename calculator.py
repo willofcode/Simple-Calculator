@@ -190,4 +190,9 @@ tk.Button(
     command=on_check_sign
 ).grid(row=5, column=2, columnspan=2, padx=2, pady=2)
 
-root.mainloop()
+root.mainloop() # Start the GUI event loop
+
+# This code is a simple calculator that supports basic arithmetic operations, toggling the sign of numbers, and checking if a number is positive, negative, or zero. It uses the tkinter library for the GUI and handles errors gracefully with message boxes.
+# The calculator allows users to perform operations using buttons and displays results in a text entry field. It also includes a clear button to reset the calculator state.
+# The calculator is designed to be user-friendly and provides feedback for invalid inputs.
+# The code is structured to separate the GUI components from the logic, making it easier to maintain and extend in the future.
